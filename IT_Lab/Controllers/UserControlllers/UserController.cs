@@ -1,8 +1,6 @@
 ﻿using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
-using System.Security.Claims;
-using Microsoft.AspNetCore.Authorization;
 using IT_Lab.Models;
 
 namespace IT_Lab.Controllers.UserControlllers
@@ -19,30 +17,32 @@ namespace IT_Lab.Controllers.UserControlllers
                 FullName = "Michael Uzi", BirthDate = new DateTime(1990, 5, 15) }
         };
 
+        [HttpPost]
         public IActionResult Login(User user)
         {
-            if (Request.Method == "GET" || user.Login == null || user.Password == null)
-            {
-                return View();
-            }
+            var foundUser = Users.FirstOrDefault(u => u.Login == user.Login);
 
-            var found_user = Users.Find(u => u.Login == user.Login);
-
-            if (found_user == null)
+            if (foundUser == null)
             {
                 ModelState.AddModelError("Login", "Incorrect login.");
                 return View(user);
             }
 
-            if (user.Password != found_user.Password)
+            if (user.Password != foundUser.Password)
             {
                 ModelState.AddModelError("Password", "Incorrect password.");
                 return View(user);
             }
 
-            Response.Cookies.Append("SignIn", found_user.Login);
+            Response.Cookies.Append("SignIn", foundUser.Login);
 
             return RedirectToAction("Account");
+        }
+
+        [HttpGet]
+        public IActionResult Login()
+        {
+            return View();
         }
 
         public IActionResult Logout()
@@ -57,15 +57,15 @@ namespace IT_Lab.Controllers.UserControlllers
 
         public IActionResult Account()
         {
-            var user_login = Request.Cookies["SignIn"];
+            var userLogin = Request.Cookies["SignIn"];
 
-            if (user_login != null)
+            if (userLogin == null)
             {
-                var user = Users.Find(u => u.Login == user_login);
-                return View(user);
+                return RedirectToAction("Login");
             }
 
-            return RedirectToAction("Login");
+            var user = Users.FirstOrDefault(u => u.Login == userLogin);
+            return View(user);
         }
     }
 }
