@@ -1,12 +1,15 @@
 ﻿using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using IT_Lab.Models;
 
 namespace IT_Lab.Controllers.UserControlllers
 {
     public class UserController : Controller
     {
+        // создаем список пользователей
         private static List<User> Users = new List<User>
         {
             new User { Login = "Alex2023@gmail.com", Password = "1234", 
@@ -17,55 +20,63 @@ namespace IT_Lab.Controllers.UserControlllers
                 FullName = "Michael Uzi", BirthDate = new DateTime(1990, 5, 15) }
         };
 
-        [HttpPost]
+        // метод для входа пользователя
         public IActionResult Login(User user)
         {
-            var foundUser = Users.FirstOrDefault(u => u.Login == user.Login);
-
-            if (foundUser == null)
+            // если метод GET или пользователь не ввел логин и пароль
+            if (Request.Method == "GET" || user.Login == null || user.Password == null)
             {
-                ModelState.AddModelError("Login", "Incorrect login.");
-                return View(user);
+                return View(); // отображаем форму для ввода логина и пароля
             }
 
-            if (user.Password != foundUser.Password)
+            // ищем пользователя с таким логином
+            var found_user = Users.Find(u => u.Login == user.Login);
+
+            // если такой пользователь не найден
+            if (found_user == null)
             {
-                ModelState.AddModelError("Password", "Incorrect password.");
-                return View(user);
+                ModelState.AddModelError("Login", "Incorrect login."); // добавляем ошибку модели
+                return View(user); // отображаем форму с ошибкой
             }
 
-            Response.Cookies.Append("SignIn", foundUser.Login);
+            // если пароль не совпадает с паролем пользователя
+            if (user.Password != found_user.Password)
+            {
+                ModelState.AddModelError("Password", "Incorrect password."); // добавляем ошибку модели
+                return View(user); // отображаем форму с ошибкой
+            }
 
-            return RedirectToAction("Account");
+            // добавляем куки с логином пользователя
+            Response.Cookies.Append("SignIn", found_user.Login);
+
+            return RedirectToAction("Account"); // перенаправляем на страницу аккаунта
         }
 
-        [HttpGet]
-        public IActionResult Login()
-        {
-            return View();
-        }
-
+        // метод для выхода пользователя
         public IActionResult Logout()
         {
+            // если куки содержит логин пользователя
             if (Request.Cookies.ContainsKey("SignIn"))
             {
-                Response.Cookies.Delete("SignIn");
+                Response.Cookies.Delete("SignIn"); // удаляем куки
             }
 
-            return RedirectToAction("Login");
+            return RedirectToAction("Login"); // перенаправляем на страницу входа
         }
 
+        // метод для отображения аккаунта пользователя
         public IActionResult Account()
         {
-            var userLogin = Request.Cookies["SignIn"];
+            var user_login = Request.Cookies["SignIn"]; // получаем логин из куков
 
-            if (userLogin == null)
+            // если логин есть
+            if (user_login != null)
             {
-                return RedirectToAction("Login");
+                var user = Users.Find(u => u.Login == user_login); // ищем пользователя в списке
+                return View(user); // отображаем страницу аккаунта с данными пользователя
             }
 
-            var user = Users.FirstOrDefault(u => u.Login == userLogin);
-            return View(user);
+            return RedirectToAction("Login"); // иначе перенаправляем на страницу входа
         }
     }
 }
