@@ -26,11 +26,18 @@ namespace IT_Lab.Controllers.UserControlllers
                 return View();
             }
 
-            var found_user = Users.Find(u => u.Login == user.Login && u.Password == user.Password);
+            var found_user = Users.Find(u => u.Login == user.Login);
 
             if (found_user == null)
             {
-                return View("ErrorAuth");
+                ModelState.AddModelError("Login", "Incorrect login.");
+                return View(user);
+            }
+
+            if (user.Password != found_user.Password)
+            {
+                ModelState.AddModelError("Password", "Incorrect password.");
+                return View(user);
             }
 
             Response.Cookies.Append("SignIn", found_user.Login);
